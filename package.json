@@ -1,6 +1,6 @@
 {
   "name": "easy-mongoo",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Ultra-simple MongoDB wrapper with all mongoose features in easy syntax",
   "main": "easy-mongoo.js",
   "types": "easy-mongoo.d.ts",
