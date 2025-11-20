@@ -11,10 +11,9 @@ class UltraMongo {
   }
 
   // ==================== CONNECTION MANAGEMENT ====================
-
   async connect(uri, options = {}) {
     try {
-      this.debug = options.debug || false;
+      this.debug = options.debug ?? true;
       delete options.debug;
 
       const defaultOptions = {
@@ -25,11 +24,7 @@ class UltraMongo {
         ...options
       };
 
-      this._log('🔄 Connecting to MongoDB...');
-      
-      this.connection = await mongoose.connect(uri, defaultOptions);
-      this.isConnected = true;
-      
+      // --- Add listeners BEFORE connect ---
       mongoose.connection.on('connected', () => {
         this._log('✅ MongoDB Connected Successfully!');
         this._log(`📊 Database: ${mongoose.connection.db.databaseName}`);
@@ -44,6 +39,11 @@ class UltraMongo {
         this.isConnected = false;
       });
 
+      this._log('🔄 Connecting to MongoDB...');
+
+      this.connection = await mongoose.connect(uri, defaultOptions);
+      this.isConnected = true;
+
       process.on('SIGINT', async () => {
         await this.disconnect();
         process.exit(0);
@@ -55,6 +55,7 @@ class UltraMongo {
       throw this._simplifyError(error);
     }
   }
+
 
   async disconnect() {
     if (this.isConnected) {
@@ -68,10 +69,10 @@ class UltraMongo {
 
   schema(definition, options = {}) {
     const processedDefinition = this._convertToFullSchema(definition);
-    
+
     const schemaOptions = {
       timestamps: { createdAt: 'createdAt', updatedAt: 'updatedAt' },
-      toJSON: { 
+      toJSON: {
         virtuals: true,
         transform: (doc, ret) => {
           ret.id = ret._id;
@@ -93,7 +94,7 @@ class UltraMongo {
 
     this._addCommonVirtuals(schema);
     this._addCommonMethods(schema);
-    
+
     return schema;
   }
 
@@ -134,7 +135,7 @@ class UltraMongo {
       'date!': { type: Date, required: [true, '{PATH} is required'] },
       'array!': { type: Array, required: [true, '{PATH} is required'] },
       'object!': { type: Object, required: [true, '{PATH} is required'] },
-      
+
       // ========== WITH DEFAULTS ==========
       'string+': { type: String, default: '' },
       'number+': { type: Number, default: 0 },
@@ -142,19 +143,19 @@ class UltraMongo {
       'date+': { type: Date, default: Date.now },
       'array+': { type: Array, default: [] },
       'object+': { type: Object, default: {} },
-      
+
       // ========== UNIQUE FIELDS ==========
       'string!!': { type: String, required: true, unique: true },
       'number!!': { type: Number, required: true, unique: true },
       'email!!': { type: String, required: true, unique: true, lowercase: true, match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'] },
-      
+
       // ========== SMART TYPES ==========
       'email': { type: String, lowercase: true, match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'] },
       'url': { type: String, match: [/https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/, 'Please enter a valid URL'] },
       'password': { type: String, minlength: 6 },
       'phone': { type: String, match: [/^[\+]?[1-9][\d]{0,15}$/, 'Please enter a valid phone number'] },
       'color': { type: String, match: [/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Please enter a valid hex color'] },
-      
+
       // ========== ID REFERENCES ==========
       'userRef': { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       'postRef': { type: mongoose.Schema.Types.ObjectId, ref: 'Post' },
@@ -190,55 +191,55 @@ class UltraMongo {
 
   _processFieldConfig(fieldName, config) {
     const processed = { ...config };
-    
+
     if (typeof processed.type === 'string') {
       processed.type = this._getMongooseType(processed.type);
     }
-    
+
     // Auto-validations
     if (processed.enum && !processed.validate) {
       processed.validate = {
-        validator: function(value) {
+        validator: function (value) {
           return processed.enum.includes(value);
         },
         message: `{PATH} must be one of: ${processed.enum.join(', ')}`
       };
     }
-    
+
     // Auto-trim strings
     if (processed.type === String && processed.trim === undefined) {
       processed.trim = true;
     }
-    
+
     // Auto-lowercase emails
     if (fieldName.toLowerCase().includes('email')) {
       processed.lowercase = true;
     }
-    
+
     return processed;
   }
 
   _addCommonVirtuals(schema) {
-    schema.virtual('id').get(function() {
+    schema.virtual('id').get(function () {
       return this._id.toString();
     });
 
-    schema.virtual('createdAtFormatted').get(function() {
+    schema.virtual('createdAtFormatted').get(function () {
       return this.createdAt?.toLocaleDateString();
     });
 
-    schema.virtual('updatedAtFormatted').get(function() {
+    schema.virtual('updatedAtFormatted').get(function () {
       return this.updatedAt?.toLocaleDateString();
     });
 
     if (schema.paths.firstName && schema.paths.lastName) {
-      schema.virtual('fullName').get(function() {
+      schema.virtual('fullName').get(function () {
         return `${this.firstName} ${this.lastName}`.trim();
       });
     }
 
     if (schema.paths.birthDate || schema.paths.dob) {
-      schema.virtual('age').get(function() {
+      schema.virtual('age').get(function () {
         const birth = this.birthDate || this.dob;
         if (!birth) return null;
         return Math.floor((Date.now() - birth) / (365.25 * 24 * 60 * 60 * 1000));
@@ -248,7 +249,7 @@ class UltraMongo {
 
   _addCommonMethods(schema) {
     // Instance methods
-    schema.methods.toJSON = function() {
+    schema.methods.toJSON = function () {
       const obj = this.toObject();
       obj.id = obj._id;
       delete obj._id;
@@ -256,48 +257,48 @@ class UltraMongo {
       return obj;
     };
 
-    schema.methods.updateFields = async function(fields) {
+    schema.methods.updateFields = async function (fields) {
       Object.keys(fields).forEach(key => {
         this[key] = fields[key];
       });
       return await this.save();
     };
 
-    schema.methods.softDelete = async function() {
+    schema.methods.softDelete = async function () {
       this.deleted = true;
       this.deletedAt = new Date();
       return await this.save();
     };
 
     // Static methods
-    schema.statics.findActive = function() {
+    schema.statics.findActive = function () {
       return this.find({ deleted: { $ne: true } });
     };
 
-    schema.statics.findDeleted = function() {
+    schema.statics.findDeleted = function () {
       return this.find({ deleted: true });
     };
 
-    schema.statics.restore = function(id) {
+    schema.statics.restore = function (id) {
       return this.findByIdAndUpdate(id, { deleted: false, deletedAt: null });
     };
 
-    schema.statics.findBySlug = function(slug) {
+    schema.statics.findBySlug = function (slug) {
       return this.findOne({ slug });
     };
 
     // Query helpers
-    schema.query.byStatus = function(status) {
+    schema.query.byStatus = function (status) {
       return this.where({ status });
     };
 
-    schema.query.recent = function(days = 7) {
+    schema.query.recent = function (days = 7) {
       const date = new Date();
       date.setDate(date.getDate() - days);
       return this.where('createdAt').gte(date);
     };
 
-    schema.query.popular = function(minViews = 100) {
+    schema.query.popular = function (minViews = 100) {
       return this.where('viewCount').gte(minViews);
     };
   }
@@ -311,15 +312,15 @@ class UltraMongo {
     }
 
     const schema = schemaDef instanceof mongoose.Schema ? schemaDef : this.schema(schemaDef, options);
-    
+
     this._addAutoIndexes(schema, schemaDef);
     this._addAutoMiddleware(schema, name);
-    
+
     const model = mongoose.model(name, schema);
-    
+
     this.models.set(name, model);
     this.schemas.set(name, schema);
-    
+
     this._log(`📝 Model '${name}' created with auto-features`);
     return model;
   }
@@ -328,25 +329,25 @@ class UltraMongo {
     const baseModel = this._getModel(baseModelName);
     const schema = this.schema(schemaDef, options);
     const discriminatorModel = baseModel.discriminator(discriminatorName, schema);
-    
+
     this.models.set(discriminatorName, discriminatorModel);
     this._log(`🎭 Discriminator '${discriminatorName}' created from '${baseModelName}'`);
-    
+
     return discriminatorModel;
   }
 
   _addAutoIndexes(schema, definition) {
     // Text search indexes
     if (definition.name || definition.title || definition.description) {
-      schema.index({ 
-        name: 'text', 
-        title: 'text', 
-        description: 'text' 
-      }, { 
-        weights: { 
-          name: 10, 
-          title: 5, 
-          description: 1 
+      schema.index({
+        name: 'text',
+        title: 'text',
+        description: 'text'
+      }, {
+        weights: {
+          name: 10,
+          title: 5,
+          description: 1
         },
         name: 'text_search_idx'
       });
@@ -376,7 +377,7 @@ class UltraMongo {
   _addAutoMiddleware(schema, modelName) {
     // Auto-slugify
     if (schema.paths.name || schema.paths.title) {
-      schema.pre('save', function(next) {
+      schema.pre('save', function (next) {
         if (this.isModified('name') || this.isModified('title')) {
           const source = this.name || this.title;
           if (source && !this.slug) {
@@ -392,7 +393,7 @@ class UltraMongo {
 
     // Auto-hash passwords
     if (schema.paths.password) {
-      schema.pre('save', async function(next) {
+      schema.pre('save', async function (next) {
         if (!this.isModified('password')) return next();
         this.password = `hashed_${this.password}_${Date.now()}`;
         next();
@@ -400,7 +401,7 @@ class UltraMongo {
     }
 
     // Auto-update timestamps on update
-    schema.pre('findOneAndUpdate', function(next) {
+    schema.pre('findOneAndUpdate', function (next) {
       this.set({ updatedAt: new Date() });
       next();
     });
@@ -415,7 +416,7 @@ class UltraMongo {
     });
 
     // Aggregate middleware
-    schema.pre('aggregate', function(next) {
+    schema.pre('aggregate', function (next) {
       this.pipeline().unshift({ $match: { deleted: { $ne: true } } });
       next();
     });
@@ -426,7 +427,7 @@ class UltraMongo {
   async create(modelName, data, options = {}) {
     try {
       const Model = this._getModel(modelName);
-      const doc = Array.isArray(data) 
+      const doc = Array.isArray(data)
         ? await Model.insertMany(data, options)
         : await Model.create(data);
       this._log(`✅ Created ${modelName}`, Array.isArray(data) ? `(${data.length} items)` : '');
@@ -463,13 +464,13 @@ class UltraMongo {
     try {
       const Model = this._getModel(modelName);
       let query = Model.findOne(filter);
-      
+
       if (options.select) query = query.select(options.select);
       if (options.populate) query = query.populate(options.populate);
       if (options.lean) query = query.lean();
       if (options.sort) query = query.sort(options.sort);
       if (options.readPreference) query = query.read(options.readPreference);
-      
+
       return await query.exec();
     } catch (error) {
       throw this._handleError(`find one ${modelName}`, error);
@@ -480,11 +481,11 @@ class UltraMongo {
     try {
       const Model = this._getModel(modelName);
       let query = Model.findById(id);
-      
+
       if (options.select) query = query.select(options.select);
       if (options.populate) query = query.populate(options.populate);
       if (options.lean) query = query.lean();
-      
+
       const doc = await query.exec();
       if (!doc) this._log(`🔍 ${modelName} with ID ${id} not found`);
       return doc;
@@ -525,7 +526,7 @@ class UltraMongo {
         this._log(`🔍 ${modelName} with ID ${id} not found`);
         return null;
       }
-      
+
       this._log(`✅ Updated ${modelName} by ID`);
       return doc;
     } catch (error) {
@@ -568,7 +569,7 @@ class UltraMongo {
         this._log(`🔍 ${modelName} with ID ${id} not found`);
         return null;
       }
-      
+
       this._log(`🗑️ Deleted ${modelName} by ID`);
       return doc;
     } catch (error) {
@@ -632,11 +633,11 @@ class UltraMongo {
     try {
       const Model = this._getModel(modelName);
       const aggregation = Model.aggregate(pipeline);
-      
+
       if (options.collation) aggregation.collation(options.collation);
       if (options.readPreference) aggregation.read(options.readPreference);
       if (options.comment) aggregation.comment(options.comment);
-      
+
       return await aggregation.exec();
     } catch (error) {
       throw this._handleError(`aggregate ${modelName}`, error);
@@ -650,8 +651,8 @@ class UltraMongo {
         { $text: { $search: searchText } },
         { score: { $meta: "textScore" } }
       ).sort({ score: { $meta: "textScore" } })
-       .limit(options.limit || 10)
-       .skip(options.skip || 0);
+        .limit(options.limit || 10)
+        .skip(options.skip || 0);
     } catch (error) {
       throw this._handleError(`textSearch ${modelName}`, error);
     }
@@ -749,11 +750,11 @@ class UltraMongo {
   virtual(modelName, field, getter = null, setter = null) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     const virtual = schema.virtual(field);
     if (getter) virtual.get(getter);
     if (setter) virtual.set(setter);
-    
+
     this._log(`🔮 Virtual field '${field}' added to ${modelName}`);
     return virtual;
   }
@@ -761,7 +762,7 @@ class UltraMongo {
   static(modelName, name, method) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.statics[name] = method;
     this._log(`⚡ Static method '${name}' added to ${modelName}`);
   }
@@ -769,7 +770,7 @@ class UltraMongo {
   method(modelName, name, method) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.methods[name] = method;
     this._log(`🎯 Instance method '${name}' added to ${modelName}`);
   }
@@ -777,7 +778,7 @@ class UltraMongo {
   query(modelName, name, helper) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.query[name] = helper;
     this._log(`🔍 Query helper '${name}' added to ${modelName}`);
   }
@@ -785,7 +786,7 @@ class UltraMongo {
   pre(modelName, hook, callback) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.pre(hook, callback);
     this._log(`⏰ Pre-hook '${hook}' added to ${modelName}`);
   }
@@ -793,7 +794,7 @@ class UltraMongo {
   post(modelName, hook, callback) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.post(hook, callback);
     this._log(`📨 Post-hook '${hook}' added to ${modelName}`);
   }
@@ -801,7 +802,7 @@ class UltraMongo {
   plugin(modelName, plugin, options = {}) {
     const schema = this.schemas.get(modelName);
     if (!schema) throw new Error(`Model '${modelName}' not found`);
-    
+
     schema.plugin(plugin, options);
     this._log(`🔌 Plugin added to ${modelName}`);
   }
@@ -838,18 +839,18 @@ class UltraMongo {
       const Model = this._getModel(modelName);
       const batchSize = options.batchSize || 100;
       let processed = 0;
-      
+
       const cursor = Model.find(options.filter || {}).cursor();
-      
+
       for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
         await migrationFn(doc);
         processed++;
-        
+
         if (processed % batchSize === 0) {
           this._log(`🔄 Migrated ${processed} documents in ${modelName}`);
         }
       }
-      
+
       this._log(`✅ Migration completed for ${modelName}: ${processed} documents processed`);
       return processed;
     } catch (error) {
@@ -861,12 +862,12 @@ class UltraMongo {
     try {
       const Model = this._getModel(modelName);
       const clearFirst = options.clearFirst || false;
-      
+
       if (clearFirst) {
         await Model.deleteMany({});
         this._log(`🧹 Cleared existing ${modelName} data`);
       }
-      
+
       const result = await Model.insertMany(data, { ordered: false });
       this._log(`🌱 Seeded ${result.length} ${modelName} documents`);
       return result;
@@ -880,7 +881,7 @@ class UltraMongo {
       const Model = this._getModel(modelName);
       const filter = options.filter || {};
       const fields = options.fields || {};
-      
+
       return await Model.find(filter).select(fields).lean();
     } catch (error) {
       throw this._handleError(`export ${modelName}`, error);
@@ -890,11 +891,11 @@ class UltraMongo {
   async importData(modelName, data, options = {}) {
     try {
       const Model = this._getModel(modelName);
-      const result = await Model.insertMany(data, { 
+      const result = await Model.insertMany(data, {
         ordered: false,
-        ...options 
+        ...options
       });
-      
+
       this._log(`📥 Imported ${result.length} ${modelName} documents`);
       return result;
     } catch (error) {
@@ -908,7 +909,7 @@ class UltraMongo {
     try {
       const Model = this._getModel(modelName);
       let result;
-      
+
       switch (operation) {
         case 'find':
           result = await Model.find(...args).explain();
@@ -919,7 +920,7 @@ class UltraMongo {
         default:
           throw new Error(`Unsupported operation for explain: ${operation}`);
       }
-      
+
       return result;
     } catch (error) {
       throw this._handleError(`explain ${operation} for ${modelName}`, error);
@@ -929,25 +930,25 @@ class UltraMongo {
   async cache(modelName, key, dataFn, ttl = 3600) {
     // Simple in-memory cache (in production, use Redis)
     if (!this._cache) this._cache = new Map();
-    
+
     const cacheKey = `${modelName}:${key}`;
     const cached = this._cache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < ttl * 1000) {
       this._log(`💾 Cache hit: ${cacheKey}`);
       return cached.data;
     }
-    
+
     this._log(`🔄 Cache miss: ${cacheKey}`);
     const data = await dataFn();
     this._cache.set(cacheKey, { data, timestamp: Date.now() });
-    
+
     return data;
   }
 
   clearCache(pattern = null) {
     if (!this._cache) return;
-    
+
     if (pattern) {
       for (const key of this._cache.keys()) {
         if (key.includes(pattern)) {
@@ -957,7 +958,7 @@ class UltraMongo {
     } else {
       this._cache.clear();
     }
-    
+
     this._log('🧹 Cache cleared', pattern ? `for pattern: ${pattern}` : '');
   }
 
@@ -1039,8 +1040,8 @@ class UltraMongo {
 
     order: {
       orderNumber: 'string!!',
-      status: { 
-        type: String, 
+      status: {
+        type: String,
         enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded'],
         default: 'pending'
       },
@@ -1101,7 +1102,7 @@ class UltraMongo {
 
   _handleError(operation, error) {
     let message = `Failed to ${operation}`;
-    
+
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue || {})[0];
       message = `${field} already exists. Please use a different value.`;
@@ -1119,7 +1120,7 @@ class UltraMongo {
     }
 
     this._error(`❌ ${message}`);
-    
+
     const simpleError = new Error(message);
     simpleError.originalError = error;
     return simpleError;
@@ -1149,7 +1150,7 @@ class UltraMongo {
   status() {
     const state = mongoose.connection.readyState;
     const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
-    
+
     return {
       connected: this.isConnected,
       readyState: states[state] || state,
