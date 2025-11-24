@@ -8,6 +8,7 @@ class UltraMongo {
     this.debug = false;
     this.schemas = new Map();
     this.globalPlugins = [];
+    this._cache = null;
   }
 
   // ==================== CONNECTION MANAGEMENT ====================
@@ -55,7 +56,6 @@ class UltraMongo {
       throw this._simplifyError(error);
     }
   }
-
 
   async disconnect() {
     if (this.isConnected) {
@@ -477,6 +477,8 @@ class UltraMongo {
     }
   }
 
+  // ==================== ENHANCED FIND & UPDATE BY ID METHODS ====================
+
   async findById(modelName, id, options = {}) {
     try {
       const Model = this._getModel(modelName);
@@ -485,13 +487,347 @@ class UltraMongo {
       if (options.select) query = query.select(options.select);
       if (options.populate) query = query.populate(options.populate);
       if (options.lean) query = query.lean();
+      if (options.session) query = query.session(options.session);
 
       const doc = await query.exec();
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+      
       if (!doc) this._log(`🔍 ${modelName} with ID ${id} not found`);
       return doc;
     } catch (error) {
       throw this._handleError(`find ${modelName} by ID`, error);
     }
+  }
+
+  async findByIdAndUpdate(modelName, id, data, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        new: true,
+        runValidators: true,
+        ...options
+      };
+
+      const doc = await Model.findByIdAndUpdate(id, data, updateOptions);
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      if (!doc) {
+        this._log(`🔍 ${modelName} with ID ${id} not found`);
+        return null;
+      }
+
+      this._log(`✅ Updated ${modelName} by ID`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`update ${modelName} by ID`, error);
+    }
+  }
+
+  async findByIdAndDelete(modelName, id, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const doc = await Model.findByIdAndDelete(id, options);
+      
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      if (!doc) {
+        this._log(`🔍 ${modelName} with ID ${id} not found`);
+        return null;
+      }
+
+      this._log(`🗑️ Deleted ${modelName} by ID`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`delete ${modelName} by ID`, error);
+    }
+  }
+
+  // ==================== NEW CONVENIENCE METHODS ====================
+
+  async updateById(modelName, id, data, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        runValidators: true,
+        ...options
+      };
+
+      const result = await Model.updateOne({ _id: id }, data, updateOptions);
+      
+      if (result.matchedCount === 0 && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      this._log(`✅ Updated ${modelName} by ID - Modified: ${result.modifiedCount}`);
+      return result;
+    } catch (error) {
+      throw this._handleError(`update ${modelName} by ID`, error);
+    }
+  }
+
+  async deleteById(modelName, id, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const result = await Model.deleteOne({ _id: id }, options);
+      
+      if (result.deletedCount === 0 && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      this._log(`🗑️ Deleted ${modelName} by ID - Deleted: ${result.deletedCount}`);
+      return result;
+    } catch (error) {
+      throw this._handleError(`delete ${modelName} by ID`, error);
+    }
+  }
+
+  async existsById(modelName, id) {
+    try {
+      const Model = this._getModel(modelName);
+      const doc = await Model.findById(id).select('_id').lean();
+      return !!doc;
+    } catch (error) {
+      throw this._handleError(`check exists ${modelName} by ID`, error);
+    }
+  }
+
+  async findByIdOrFail(modelName, id, options = {}) {
+    const doc = await this.findById(modelName, id, { ...options, throwIfNotFound: true });
+    return doc;
+  }
+
+  async findByIdAndUpdateOrFail(modelName, id, data, options = {}) {
+    const doc = await this.findByIdAndUpdate(modelName, id, data, { ...options, throwIfNotFound: true });
+    return doc;
+  }
+
+  async findByIdAndDeleteOrFail(modelName, id, options = {}) {
+    const doc = await this.findByIdAndDelete(modelName, id, { ...options, throwIfNotFound: true });
+    return doc;
+  }
+
+  // ==================== BATCH OPERATIONS BY ID ====================
+
+  async findByIds(modelName, ids, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      let query = Model.find({ _id: { $in: ids } });
+
+      if (options.select) query = query.select(options.select);
+      if (options.populate) query = query.populate(options.populate);
+      if (options.lean) query = query.lean();
+      if (options.sort) query = query.sort(options.sort);
+      if (options.session) query = query.session(options.session);
+
+      const docs = await query.exec();
+      this._log(`🔍 Found ${docs.length} ${modelName} documents by IDs`);
+      return docs;
+    } catch (error) {
+      throw this._handleError(`find ${modelName} by IDs`, error);
+    }
+  }
+
+  async updateByIds(modelName, ids, data, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        runValidators: true,
+        ...options
+      };
+
+      const result = await Model.updateMany(
+        { _id: { $in: ids } }, 
+        data, 
+        updateOptions
+      );
+
+      this._log(`✅ Updated ${result.modifiedCount} ${modelName} documents by IDs`);
+      return result;
+    } catch (error) {
+      throw this._handleError(`update ${modelName} by IDs`, error);
+    }
+  }
+
+  async deleteByIds(modelName, ids, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const result = await Model.deleteMany(
+        { _id: { $in: ids } }, 
+        options
+      );
+
+      this._log(`🗑️ Deleted ${result.deletedCount} ${modelName} documents by IDs`);
+      return result;
+    } catch (error) {
+      throw this._handleError(`delete ${modelName} by IDs`, error);
+    }
+  }
+
+  // ==================== UPSERT OPERATIONS ====================
+
+  async findByIdAndUpsert(modelName, id, data, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const upsertOptions = {
+        new: true,
+        runValidators: true,
+        upsert: true,
+        setDefaultsOnInsert: true,
+        ...options
+      };
+
+      const doc = await Model.findByIdAndUpdate(
+        id, 
+        data, 
+        upsertOptions
+      );
+
+      const action = doc.isNew ? 'Created' : 'Updated';
+      this._log(`✅ ${action} ${modelName} by ID (upsert)`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`upsert ${modelName} by ID`, error);
+    }
+  }
+
+  // ==================== FIELD-SPECIFIC UPDATES ====================
+
+  async findByIdAndIncrement(modelName, id, field, value = 1, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        new: true,
+        runValidators: true,
+        ...options
+      };
+
+      const doc = await Model.findByIdAndUpdate(
+        id,
+        { $inc: { [field]: value } },
+        updateOptions
+      );
+
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      this._log(`🔢 Incremented ${field} by ${value} for ${modelName}`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`increment ${modelName} field`, error);
+    }
+  }
+
+  async findByIdAndPush(modelName, id, field, value, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        new: true,
+        runValidators: true,
+        ...options
+      };
+
+      const doc = await Model.findByIdAndUpdate(
+        id,
+        { $push: { [field]: value } },
+        updateOptions
+      );
+
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      this._log(`📥 Pushed value to ${field} for ${modelName}`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`push to ${modelName} array`, error);
+    }
+  }
+
+  async findByIdAndPull(modelName, id, field, value, options = {}) {
+    try {
+      const Model = this._getModel(modelName);
+      const updateOptions = {
+        new: true,
+        runValidators: true,
+        ...options
+      };
+
+      const doc = await Model.findByIdAndUpdate(
+        id,
+        { $pull: { [field]: value } },
+        updateOptions
+      );
+
+      if (!doc && options.throwIfNotFound !== false) {
+        throw new Error(`${modelName} with ID ${id} not found`);
+      }
+
+      this._log(`📤 Pulled value from ${field} for ${modelName}`);
+      return doc;
+    } catch (error) {
+      throw this._handleError(`pull from ${modelName} array`, error);
+    }
+  }
+
+  // ==================== STATUS-BASED OPERATIONS ====================
+
+  async findByIdAndActivate(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { isActive: true, activatedAt: new Date() }, 
+      options
+    );
+  }
+
+  async findByIdAndDeactivate(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { isActive: false, deactivatedAt: new Date() }, 
+      options
+    );
+  }
+
+  async findByIdAndArchive(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { status: 'archived', archivedAt: new Date() }, 
+      options
+    );
+  }
+
+  async findByIdAndPublish(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { status: 'published', publishedAt: new Date() }, 
+      options
+    );
+  }
+
+  // ==================== SOFT DELETE OPERATIONS ====================
+
+  async findByIdAndSoftDelete(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { 
+        deleted: true, 
+        deletedAt: new Date(),
+        deletedBy: options.deletedBy || null
+      }, 
+      options
+    );
+  }
+
+  async findByIdAndRestore(modelName, id, options = {}) {
+    return await this.findByIdAndUpdate(modelName, id, 
+      { 
+        deleted: false, 
+        deletedAt: null,
+        deletedBy: null
+      }, 
+      options
+    );
   }
 
   async findOneAndUpdate(modelName, filter, data, options = {}) {
@@ -509,28 +845,6 @@ class UltraMongo {
       return doc;
     } catch (error) {
       throw this._handleError(`findOneAndUpdate ${modelName}`, error);
-    }
-  }
-
-  async findByIdAndUpdate(modelName, id, data, options = {}) {
-    try {
-      const Model = this._getModel(modelName);
-      const updateOptions = {
-        new: true,
-        runValidators: true,
-        ...options
-      };
-
-      const doc = await Model.findByIdAndUpdate(id, data, updateOptions);
-      if (!doc) {
-        this._log(`🔍 ${modelName} with ID ${id} not found`);
-        return null;
-      }
-
-      this._log(`✅ Updated ${modelName} by ID`);
-      return doc;
-    } catch (error) {
-      throw this._handleError(`update ${modelName} by ID`, error);
     }
   }
 
@@ -558,22 +872,6 @@ class UltraMongo {
       return doc;
     } catch (error) {
       throw this._handleError(`findOneAndDelete ${modelName}`, error);
-    }
-  }
-
-  async findByIdAndDelete(modelName, id, options = {}) {
-    try {
-      const Model = this._getModel(modelName);
-      const doc = await Model.findByIdAndDelete(id, options);
-      if (!doc) {
-        this._log(`🔍 ${modelName} with ID ${id} not found`);
-        return null;
-      }
-
-      this._log(`🗑️ Deleted ${modelName} by ID`);
-      return doc;
-    } catch (error) {
-      throw this._handleError(`delete ${modelName} by ID`, error);
     }
   }
 
@@ -1199,4 +1497,4 @@ class UltraMongo {
 
 // Create and export instance
 const ultraMongo = new UltraMongo();
-module.exports = ultraMongo;  
+module.exports = ultraMongo;
