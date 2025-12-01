@@ -34,7 +34,7 @@ await mongoo.connect('mongodb://localhost:27017/mydb');
 // 2. Create a model with easy schema
 mongoo.model('User', {
   name: 'string!',
-  email: 'email',
+  email: 'email!!',
   age: 'number?'
 });
 
@@ -52,20 +52,97 @@ That's it! You've just created a MongoDB connection, defined a schema, and saved
 
 ## 📖 Table of Contents
 
-- [Connection](#-connection)
-- [Schema Creation](#-schema-creation)
-- [Models](#-models)
-- [CRUD Operations](#-crud-operations)
-- [Virtual Fields](#-virtual-fields)
-- [Methods & Statics](#-methods--statics)
-- [Middleware (Hooks)](#-middleware-hooks)
-- [Transactions](#-transactions)
-- [Aggregation](#-aggregation)
-- [Indexes](#-indexes)
-- [Plugins](#-plugins)
-- [Advanced Features](#-advanced-features)
-- [Error Handling](#-error-handling)
-- [Mongoose vs Easy-Mongoo](#-mongoose-vs-easy-mongoo)
+- [Easy-Mongoo 🚀](#easy-mongoo-)
+  - [✨ Features](#-features)
+  - [📦 Installation](#-installation)
+  - [🚀 Quick Start](#-quick-start)
+  - [📖 Table of Contents](#-table-of-contents)
+  - [🔌 Connection](#-connection)
+  - [📝 Schema Creation](#-schema-creation)
+    - [Basic Schema Shortcuts](#basic-schema-shortcuts)
+    - [Schema Shortcuts Reference](#schema-shortcuts-reference)
+    - [Advanced Schema with Validations](#advanced-schema-with-validations)
+  - [🎨 Models](#-models)
+  - [🔨 CRUD Operations](#-crud-operations)
+    - [Create](#create)
+    - [Read](#read)
+    - [Update](#update)
+    - [Delete](#delete)
+  - [🆔 ID-Based Operations](#-id-based-operations)
+    - [Basic ID Operations](#basic-id-operations)
+    - [Update by ID](#update-by-id)
+    - [Delete by ID](#delete-by-id)
+    - [Upsert by ID](#upsert-by-id)
+  - [📦 Batch Operations](#-batch-operations)
+  - [🔧 Field-Specific Updates](#-field-specific-updates)
+    - [Increment/Decrement](#incrementdecrement)
+    - [Array Operations](#array-operations)
+  - [🔄 Status Operations](#-status-operations)
+  - [🗑️ Soft Delete Operations](#️-soft-delete-operations)
+  - [🎭 Virtual Fields](#-virtual-fields)
+  - [🔧 Methods \& Statics](#-methods--statics)
+    - [Instance Methods](#instance-methods)
+    - [Static Methods](#static-methods)
+    - [Query Helpers](#query-helpers)
+  - [🪝 Middleware (Hooks)](#-middleware-hooks)
+    - [Pre Hooks](#pre-hooks)
+    - [Post Hooks](#post-hooks)
+    - [Aggregate Hooks](#aggregate-hooks)
+  - [💳 Transactions](#-transactions)
+    - [Basic Transaction](#basic-transaction)
+    - [Transaction with Retry Logic](#transaction-with-retry-logic)
+    - [Manual Session Management](#manual-session-management)
+  - [📊 Aggregation](#-aggregation)
+    - [Basic Aggregation](#basic-aggregation)
+    - [Advanced Pipeline](#advanced-pipeline)
+    - [Faceted Search](#faceted-search)
+  - [🔍 Indexes](#-indexes)
+  - [🔌 Plugins](#-plugins)
+  - [🌟 Advanced Features](#-advanced-features)
+    - [Pagination](#pagination)
+    - [Bulk Operations](#bulk-operations)
+    - [Text Search](#text-search)
+    - [Geospatial Queries](#geospatial-queries)
+    - [Data Migration](#data-migration)
+    - [Seeding Data](#seeding-data)
+    - [Export/Import Data](#exportimport-data)
+    - [Query Explanation](#query-explanation)
+    - [Caching](#caching)
+  - [🎯 Predefined Templates](#-predefined-templates)
+    - [User Template](#user-template)
+    - [Product Template](#product-template)
+    - [Post Template](#post-template)
+    - [Order Template](#order-template)
+  - [❌ Error Handling](#-error-handling)
+  - [🐛 Debugging](#-debugging)
+  - [🧰 Utility Methods](#-utility-methods)
+    - [Database Operations](#database-operations)
+  - [🆚 Mongoose vs Easy-Mongoo](#-mongoose-vs-easy-mongoo)
+    - [Connection Comparison](#connection-comparison)
+    - [Schema Definition Comparison](#schema-definition-comparison)
+    - [CRUD Comparison](#crud-comparison)
+    - [Key Advantages](#key-advantages)
+  - [📚 Complete API Reference](#-complete-api-reference)
+    - [Connection](#connection)
+    - [Models](#models)
+    - [Basic CRUD](#basic-crud)
+    - [ID Operations](#id-operations)
+    - [Batch ID Operations](#batch-id-operations)
+    - [Field Updates](#field-updates)
+    - [Status Operations](#status-operations)
+    - [Soft Deletes](#soft-deletes)
+    - [Advanced](#advanced)
+    - [Transactions](#transactions)
+    - [Schema Extensions](#schema-extensions)
+    - [Indexes](#indexes)
+    - [Data Management](#data-management)
+    - [Utilities](#utilities)
+    - [Properties](#properties)
+  - [🤝 Contributing](#-contributing)
+  - [📄 License](#-license)
+  - [🙏 Acknowledgments](#-acknowledgments)
+  - [📞 Support](#-support)
+  - [🗺️ Roadmap](#️-roadmap)
 
 ## 🔌 Connection
 
@@ -77,14 +154,24 @@ await mongoo.connect('mongodb://localhost:27017/mydb');
 // With options and debug mode
 await mongoo.connect('mongodb://localhost:27017/mydb', {
   debug: true,
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+  maxPoolSize: 10,
+  minPoolSize: 2
 });
 
 // Check connection status
 const status = mongoo.status();
 console.log(status);
-// { connected: true, database: 'mydb', host: 'localhost:27017', ... }
+// { 
+//   connected: true, 
+//   readyState: 'connected',
+//   database: 'mydb', 
+//   host: 'localhost', 
+//   port: 27017,
+//   models: ['User', 'Post'],
+//   collections: ['users', 'posts'],
+//   plugins: 2,
+//   cache: 5
+// }
 
 // Disconnect when done
 await mongoo.disconnect();
@@ -120,16 +207,37 @@ const userSchema = {
 
 ### Schema Shortcuts Reference
 
-| Shortcut     | Description                | Equivalent To                                         |
-| ------------ | -------------------------- | ----------------------------------------------------- |
-| `'string!'`  | Required string            | `{ type: String, required: true }`                    |
-| `'number?'`  | Optional number            | `Number`                                              |
-| `'boolean+'` | Boolean with default false | `{ type: Boolean, default: false }`                   |
-| `'email'`    | Email with validation      | `{ type: String, required: true, match: emailRegex }` |
-| `'password'` | Password with min length   | `{ type: String, required: true, minlength: 6 }`      |
-| `'url'`      | URL with validation        | `{ type: String, match: urlRegex }`                   |
-| `'date'`     | Date field                 | `Date`                                                |
-| `'userRef'`  | Reference to User model    | `{ type: ObjectId, ref: 'User' }`                     |
+| Shortcut      | Description                  | Equivalent To                                              |
+|---------------|------------------------------|------------------------------------------------------------|
+| `'string'`    | Basic string                 | `String`                                                   |
+| `'string!'`   | Required string              | `{ type: String, required: true }`                         |
+| `'string+'`   | String with default          | `{ type: String, default: '' }`                            |
+| `'string!!'`  | Required & unique string     | `{ type: String, required: true, unique: true }`           |
+| `'number'`    | Basic number                 | `Number`                                                   |
+| `'number!'`   | Required number              | `{ type: Number, required: true }`                         |
+| `'number+'`   | Number with default 0        | `{ type: Number, default: 0 }`                             |
+| `'boolean'`   | Basic boolean                | `Boolean`                                                  |
+| `'boolean!'`  | Required boolean             | `{ type: Boolean, required: true }`                        |
+| `'boolean+'`  | Boolean with default false   | `{ type: Boolean, default: false }`                        |
+| `'date'`      | Basic date                   | `Date`                                                     |
+| `'date+'`     | Date with default now        | `{ type: Date, default: Date.now }`                        |
+| `'array'`     | Basic array                  | `Array`                                                    |
+| `'array+'`    | Array with default []        | `{ type: Array, default: [] }`                             |
+| `'object'`    | Basic object                 | `Object`                                                   |
+| `'object+'`   | Object with default {}       | `{ type: Object, default: {} }`                            |
+| `'email'`     | Email with validation        | `{ type: String, lowercase: true, match: emailRegex }`     |
+| `'email!!'`   | Required unique email        | `{ type: String, required: true, unique: true, lowercase: true, match: emailRegex }` |
+| `'password'`  | Password with min length     | `{ type: String, minlength: 6 }`                           |
+| `'url'`       | URL with validation          | `{ type: String, match: urlRegex }`                        |
+| `'phone'`     | Phone with validation        | `{ type: String, match: phoneRegex }`                      |
+| `'color'`     | Hex color with validation    | `{ type: String, match: hexColorRegex }`                   |
+| `'userRef'`   | Reference to User model      | `{ type: ObjectId, ref: 'User' }`                          |
+| `'postRef'`   | Reference to Post model      | `{ type: ObjectId, ref: 'Post' }`                          |
+| `'productRef'`| Reference to Product model   | `{ type: ObjectId, ref: 'Product' }`                       |
+| `'orderRef'`  | Reference to Order model     | `{ type: ObjectId, ref: 'Order' }`                         |
+| `'categoryRef'`| Reference to Category model | `{ type: ObjectId, ref: 'Category' }`                      |
+| `'point'`     | GeoJSON Point                | `{ type: { type: String, enum: ['Point'] }, coordinates: [Number] }` |
+| `'location'`  | Full location object         | Address, city, country with 2dsphere coordinates           |
 
 ### Advanced Schema with Validations
 ```javascript
@@ -165,23 +273,29 @@ Create models with automatic features and enhancements:
 const User = mongoo.model('User', {
   firstName: 'string!',
   lastName: 'string!',
-  email: 'email',
+  email: 'email!!',
   birthDate: 'date?'
 });
 
-// Get existing model
-const User = mongoo.getModel('User');
-
 // Use predefined template
 const User = mongoo.model('User', mongoo.templates.user);
+
+// Create discriminator (inheritance)
+const ClickEvent = mongoo.discriminator('Event', 'ClickEvent', {
+  elementId: 'string!',
+  coordinates: { x: 'number!', y: 'number!' }
+});
 ```
 
 **Auto-Features Included:**
 - ✅ Timestamps: Automatic `createdAt` and `updatedAt` fields
-- ✅ Indexes: Auto-indexing for common fields
-- ✅ Virtuals: Automatic virtual fields (`fullName`, `age`, etc.)
-- ✅ Middleware: Auto-hooks for common operations
+- ✅ Indexes: Auto-indexing for common fields (status, category, userId, etc.)
+- ✅ Virtuals: Automatic virtual fields (`id`, `fullName`, `age`, `createdAtFormatted`, etc.)
+- ✅ Middleware: Auto-hooks for slugification, password hashing, soft deletes
 - ✅ Validation: Smart validation with friendly messages
+- ✅ Methods: Built-in instance methods (`updateFields`, `softDelete`, `toJSON`)
+- ✅ Statics: Built-in static methods (`findActive`, `findDeleted`, `restore`, `findBySlug`)
+- ✅ Query Helpers: Built-in query helpers (`byStatus`, `recent`, `popular`)
 
 ## 🔨 CRUD Operations
 
@@ -201,12 +315,6 @@ const users = await mongoo.create('User', [
   { name: 'Bob', email: 'bob@example.com' },
   { name: 'Charlie', email: 'charlie@example.com' }
 ]);
-
-// Find or create
-const user = await mongoo.findOrCreate('User',
-  { email: 'alice@example.com' },
-  { name: 'Alice', age: 28 }
-);
 ```
 
 ### Read
@@ -223,53 +331,236 @@ const activeUsers = await mongoo.find('User', {
 // Find one document
 const user = await mongoo.findOne('User', { email: 'alice@example.com' });
 
-// Find by ID
-const user = await mongoo.findById('User', '507f1f77bcf86cd799439011');
-
 // Find with options
 const users = await mongoo.find('User', {}, {
   sort: { createdAt: -1 },
   limit: 10,
   select: 'name email',
-  populate: 'posts'
+  populate: 'posts',
+  lean: true
 });
+
+// Check if exists
+const exists = await mongoo.exists('User', { email: 'alice@example.com' });
+
+// Count documents
+const count = await mongoo.count('User', { isActive: true });
+
+// Get distinct values
+const cities = await mongoo.distinct('User', 'city', { isActive: true });
 ```
 
 ### Update
 ```javascript
 // Update multiple documents
-await mongoo.update('User',
+const result = await mongoo.update('User',
   { isActive: false },
   { status: 'inactive' }
 );
+console.log(`Modified ${result.modifiedCount} documents`);
 
-// Update by ID
-const updatedUser = await mongoo.updateById('User',
-  '507f1f77bcf86cd799439011',
-  { age: 29, lastLogin: new Date() }
+// Find one and update
+const updatedUser = await mongoo.findOneAndUpdate('User',
+  { email: 'alice@example.com' },
+  { age: 29 },
+  { new: true } // Return updated document
 );
-
-// Save (create or update)
-const user = await mongoo.save('User', {
-  _id: '507f1f77bcf86cd799439011', // If provided, updates existing
-  name: 'Alice Updated',
-  email: 'alice.updated@example.com'
-});
 ```
 
 ### Delete
 ```javascript
 // Delete multiple documents
-await mongoo.delete('User', { isActive: false });
+const result = await mongoo.delete('User', { isActive: false });
+console.log(`Deleted ${result.deletedCount} documents`);
 
-// Delete by ID
-await mongoo.deleteById('User', '507f1f77bcf86cd799439011');
+// Find one and delete
+const deletedUser = await mongoo.findOneAndDelete('User', 
+  { email: 'old@example.com' }
+);
+```
 
-// Check if document exists
-const exists = await mongoo.exists('User', { email: 'alice@example.com' });
+## 🆔 ID-Based Operations
 
-// Count documents
-const count = await mongoo.count('User', { isActive: true });
+Easy-Mongoo provides comprehensive ID-based operations with automatic error handling:
+
+### Basic ID Operations
+```javascript
+// Find by ID
+const user = await mongoo.findById('User', '507f1f77bcf86cd799439011');
+
+// Find by ID with options
+const user = await mongoo.findById('User', userId, {
+  select: 'name email',
+  populate: 'posts',
+  lean: true
+});
+
+// Find by ID or throw error
+const user = await mongoo.findByIdOrFail('User', userId);
+// Throws error if not found
+
+// Check if ID exists
+const exists = await mongoo.existsById('User', userId);
+console.log(exists); // true or false
+```
+
+### Update by ID
+```javascript
+// Find by ID and update (returns updated document)
+const updatedUser = await mongoo.findByIdAndUpdate('User', userId, {
+  age: 31,
+  lastLogin: new Date()
+}, {
+  new: true, // Return updated document (default: true)
+  runValidators: true // Run schema validators (default: true)
+});
+
+// Update by ID (returns operation result)
+const result = await mongoo.updateById('User', userId, {
+  age: 31
+});
+console.log(`Modified: ${result.modifiedCount}`);
+
+// Update by ID or throw error
+const user = await mongoo.findByIdAndUpdateOrFail('User', userId, {
+  status: 'active'
+});
+```
+
+### Delete by ID
+```javascript
+// Find by ID and delete (returns deleted document)
+const deletedUser = await mongoo.findByIdAndDelete('User', userId);
+
+// Delete by ID (returns operation result)
+const result = await mongoo.deleteById('User', userId);
+console.log(`Deleted: ${result.deletedCount}`);
+
+// Delete by ID or throw error
+const user = await mongoo.findByIdAndDeleteOrFail('User', userId);
+```
+
+### Upsert by ID
+```javascript
+// Find by ID and upsert (create if not exists)
+const user = await mongoo.findByIdAndUpsert('User', userId, {
+  name: 'Alice',
+  email: 'alice@example.com',
+  age: 28
+});
+// Creates new document if ID doesn't exist
+// Updates existing document if ID exists
+```
+
+## 📦 Batch Operations
+
+Perform operations on multiple documents by ID:
+```javascript
+// Find multiple documents by IDs
+const users = await mongoo.findByIds('User', [
+  '507f1f77bcf86cd799439011',
+  '507f1f77bcf86cd799439012',
+  '507f1f77bcf86cd799439013'
+], {
+  select: 'name email',
+  sort: { createdAt: -1 }
+});
+
+// Update multiple documents by IDs
+const result = await mongoo.updateByIds('User',
+  [userId1, userId2, userId3],
+  { status: 'active', lastLogin: new Date() }
+);
+console.log(`Modified ${result.modifiedCount} documents`);
+
+// Delete multiple documents by IDs
+const result = await mongoo.deleteByIds('User',
+  [userId1, userId2, userId3]
+);
+console.log(`Deleted ${result.deletedCount} documents`);
+```
+
+## 🔧 Field-Specific Updates
+
+Perform atomic updates on specific fields:
+
+### Increment/Decrement
+```javascript
+// Increment a field
+const user = await mongoo.findByIdAndIncrement('User', userId, 'loginCount', 1);
+
+// Decrement a field (use negative value)
+const product = await mongoo.findByIdAndIncrement('Product', productId, 'stock', -5);
+
+// Increment multiple fields
+const stats = await mongoo.findByIdAndUpdate('User', userId, {
+  $inc: { loginCount: 1, points: 10 }
+});
+```
+
+### Array Operations
+```javascript
+// Push to array
+const user = await mongoo.findByIdAndPush('User', userId, 'tags', 'premium');
+
+// Push multiple values
+const user = await mongoo.findByIdAndUpdate('User', userId, {
+  $push: { tags: { $each: ['premium', 'verified'] } }
+});
+
+// Pull from array
+const user = await mongoo.findByIdAndPull('User', userId, 'tags', 'guest');
+
+// Add to set (only if not exists)
+const user = await mongoo.findByIdAndUpdate('User', userId, {
+  $addToSet: { tags: 'premium' }
+});
+```
+
+## 🔄 Status Operations
+
+Built-in methods for common status changes:
+```javascript
+// Activate user
+const user = await mongoo.findByIdAndActivate('User', userId);
+// Sets: { isActive: true, activatedAt: new Date() }
+
+// Deactivate user
+const user = await mongoo.findByIdAndDeactivate('User', userId);
+// Sets: { isActive: false, deactivatedAt: new Date() }
+
+// Archive document
+const post = await mongoo.findByIdAndArchive('Post', postId);
+// Sets: { status: 'archived', archivedAt: new Date() }
+
+// Publish document
+const post = await mongoo.findByIdAndPublish('Post', postId);
+// Sets: { status: 'published', publishedAt: new Date() }
+```
+
+## 🗑️ Soft Delete Operations
+
+Implement soft deletes without physically removing data:
+```javascript
+// Soft delete (mark as deleted)
+const user = await mongoo.findByIdAndSoftDelete('User', userId, {
+  deletedBy: currentUserId // Optional: track who deleted
+});
+// Sets: { deleted: true, deletedAt: new Date(), deletedBy: userId }
+
+// Restore soft-deleted document
+const user = await mongoo.findByIdAndRestore('User', userId);
+// Sets: { deleted: false, deletedAt: null, deletedBy: null }
+
+// Find active (non-deleted) documents
+const User = mongoo.getModel('User');
+const activeUsers = await User.findActive();
+
+// Find deleted documents
+const deletedUsers = await User.findDeleted();
+
+// Restore using static method
+await User.restore(userId);
 ```
 
 ## 🎭 Virtual Fields
@@ -277,16 +568,18 @@ const count = await mongoo.count('User', { isActive: true });
 Virtual fields are computed properties that don't get stored in MongoDB:
 ```javascript
 // Auto virtuals (already included)
-// - fullName (if firstName and lastName exist)
-// - age (if birthDate exists)
-// - createdAtFormatted
+// - id: String version of _id
+// - fullName: firstName + lastName (if both exist)
+// - age: Calculated from birthDate (if exists)
+// - createdAtFormatted: Formatted createdAt date
+// - updatedAtFormatted: Formatted updatedAt date
 
-// Custom virtual field
+// Custom virtual field (getter only)
 mongoo.virtual('User', 'profileUrl', function() {
   return `/users/${this.slug || this._id}`;
 });
 
-// Virtual with setter
+// Virtual with getter and setter
 mongoo.virtual('User', 'fullName',
   // Getter
   function() {
@@ -301,9 +594,15 @@ mongoo.virtual('User', 'fullName',
 );
 
 // Usage
-const user = await mongoo.findById('User', '...');
-console.log(user.fullName); // Computed property
-console.log(user.profileUrl); // Custom virtual
+const user = await mongoo.findById('User', userId);
+console.log(user.fullName); // "John Doe"
+console.log(user.profileUrl); // "/users/507f1f77bcf86cd799439011"
+console.log(user.age); // 30 (calculated from birthDate)
+
+// Set via virtual
+user.fullName = "Jane Smith";
+console.log(user.firstName); // "Jane"
+console.log(user.lastName); // "Smith"
 ```
 
 ## 🔧 Methods & Statics
@@ -331,10 +630,15 @@ mongoo.method('User', 'deactivate', async function(reason) {
 });
 
 // Usage
-const user = await mongoo.findById('User', '...');
+const user = await mongoo.findById('User', userId);
 const profile = user.getProfile();
 await user.deactivate('User requested');
 ```
+
+**Built-in Instance Methods:**
+- `toJSON()` - Convert document to JSON with id field
+- `updateFields(fields)` - Update multiple fields and save
+- `softDelete()` - Mark document as deleted
 
 ### Static Methods
 ```javascript
@@ -343,7 +647,7 @@ mongoo.static('User', 'findByEmail', async function(email) {
   return await this.findOne({ email }).populate('posts');
 });
 
-// Static method with complex logic
+// Static method with aggregation
 mongoo.static('User', 'getActiveStats', async function() {
   const stats = await this.aggregate([
     { $match: { isActive: true } },
@@ -361,9 +665,16 @@ mongoo.static('User', 'getActiveStats', async function() {
 });
 
 // Usage
-const user = await mongoo.getModel('User').findByEmail('alice@example.com');
-const stats = await mongoo.getModel('User').getActiveStats();
+const User = mongoo.getModel('User');
+const user = await User.findByEmail('alice@example.com');
+const stats = await User.getActiveStats();
 ```
+
+**Built-in Static Methods:**
+- `findActive()` - Find all non-deleted documents
+- `findDeleted()` - Find all deleted documents
+- `restore(id)` - Restore a soft-deleted document
+- `findBySlug(slug)` - Find document by slug
 
 ### Query Helpers
 ```javascript
@@ -386,6 +697,11 @@ mongoo.query('User', 'search', function(text) {
 const adults = await mongoo.find('User').byAgeRange(18, 65);
 const searchResults = await mongoo.find('User').search('alice');
 ```
+
+**Built-in Query Helpers:**
+- `.byStatus(status)` - Filter by status field
+- `.recent(days)` - Filter by createdAt within last N days
+- `.popular(minViews)` - Filter by viewCount greater than N
 
 ## 🪝 Middleware (Hooks)
 
@@ -414,6 +730,12 @@ mongoo.pre('User', 'find', function(next) {
   this.where({ isActive: true });
   next();
 });
+
+// Pre-findOneAndUpdate hook
+mongoo.pre('User', 'findOneAndUpdate', function(next) {
+  this.set({ updatedAt: new Date() });
+  next();
+});
 ```
 
 ### Post Hooks
@@ -436,24 +758,27 @@ mongoo.post('User', 'find', function(docs) {
 
 ### Aggregate Hooks
 ```javascript
-// Pre-aggregate hook
+// Pre-aggregate hook (auto-applied to exclude deleted)
 mongoo.pre('User', 'aggregate', function(next) {
-  // Add match stage to exclude deleted users
-  this.pipeline().unshift({ $match: { isActive: true } });
+  this.pipeline().unshift({ $match: { deleted: { $ne: true } } });
   next();
 });
-
-// Post-aggregate hook
-mongoo.post('User', 'aggregate', function(docs) {
-  console.log(`Aggregation returned ${docs.length} documents`);
-});
 ```
+
+**Auto-Applied Middleware:**
+- Auto-slugify: Generates slug from name/title field
+- Auto-hash passwords: Hashes password field on save
+- Auto-update timestamps: Updates `updatedAt` on findOneAndUpdate
+- Logging: Logs save/remove operations
+- Soft delete filter: Excludes deleted documents in aggregation
 
 ## 💳 Transactions
 
 Execute multiple operations as a single atomic transaction:
+
+### Basic Transaction
 ```javascript
-// Basic transaction
+// With automatic commit/rollback
 await mongoo.withTransaction(async (session) => {
   // Create user
   const user = await mongoo.create('User', {
@@ -467,37 +792,48 @@ await mongoo.withTransaction(async (session) => {
     content: 'Hello World!',
     author: user._id
   }, { session });
+  
+  // If any operation fails, entire transaction is rolled back
 });
+```
 
-// Transaction with retry logic
+### Transaction with Retry Logic
+```javascript
+// Automatically retry transaction on transient errors
 await mongoo.withRetryTransaction(async (session) => {
   // Transfer money between accounts
   await mongoo.update(
     'Account',
-    { _id: 'fromAccountId', balance: { $gte: 100 } },
+    { _id: fromAccountId, balance: { $gte: 100 } },
     { $inc: { balance: -100 } },
     { session }
   );
   
   await mongoo.update(
     'Account',
-    { _id: 'toAccountId' },
+    { _id: toAccountId },
     { $inc: { balance: 100 } },
     { session }
   );
 }, 3); // Retry up to 3 times
+```
 
-// Manual session management
+### Manual Session Management
+```javascript
 const session = await mongoo.startSession();
+
 try {
   session.startTransaction();
   
   // Your operations here
-  await mongoo.create('User', userData, { session });
+  const user = await mongoo.create('User', userData, { session });
+  await mongoo.create('Post', postData, { session });
   
   await session.commitTransaction();
+  console.log('Transaction successful');
 } catch (error) {
   await session.abortTransaction();
+  console.error('Transaction failed:', error);
   throw error;
 } finally {
   session.endSession();
@@ -510,7 +846,7 @@ Perform complex data analysis with MongoDB aggregation pipeline:
 
 ### Basic Aggregation
 ```javascript
-// Basic aggregation - group by category
+// Group by category
 const categoryStats = await mongoo.aggregate('Product', [
   {
     $group: {
@@ -524,7 +860,7 @@ const categoryStats = await mongoo.aggregate('Product', [
   { $sort: { totalProducts: -1 } }
 ]);
 
-// Lookup aggregation (join collections)
+// Lookup (join collections)
 const userOrders = await mongoo.aggregate('Order', [
   {
     $lookup: {
@@ -548,9 +884,9 @@ const userOrders = await mongoo.aggregate('Order', [
 
 ### Advanced Pipeline
 ```javascript
-// Advanced aggregation with multiple stages
+// Sales report with multiple stages
 const salesReport = await mongoo.aggregate('Order', [
-  // Match orders from last 30 days
+  // Match recent completed orders
   {
     $match: {
       createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
@@ -568,7 +904,6 @@ const salesReport = await mongoo.aggregate('Order', [
       as: 'productInfo'
     }
   },
-  // Unwind product info
   { $unwind: '$productInfo' },
   // Group by product category
   {
@@ -579,21 +914,15 @@ const salesReport = await mongoo.aggregate('Order', [
       avgOrderValue: { $avg: '$total' }
     }
   },
-  // Sort by revenue
   { $sort: { totalRevenue: -1 } }
 ]);
 ```
 
 ### Faceted Search
 ```javascript
-// Faceted search with multiple aggregations
+// Multiple aggregations in one query
 const facetedResults = await mongoo.aggregate('Product', [
-  {
-    $match: {
-      price: { $lte: 1000 },
-      isActive: true
-    }
-  },
+  { $match: { price: { $lte: 1000 }, isActive: true } },
   {
     $facet: {
       // Price ranges
@@ -612,19 +941,12 @@ const facetedResults = await mongoo.aggregate('Product', [
       ],
       // Categories
       categories: [
-        {
-          $group: {
-            _id: '$category',
-            count: { $sum: 1 }
-          }
-        },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 10 }
       ],
       // Total count
-      totalCount: [
-        { $count: 'count' }
-      ]
+      totalCount: [{ $count: 'count' }]
     }
   }
 ]);
@@ -635,29 +957,33 @@ const facetedResults = await mongoo.aggregate('Product', [
 Create and manage indexes for better query performance:
 ```javascript
 // Create single field index
-await mongoo.index('User', { email: 1 });
+await mongoo.createIndex('User', { email: 1 });
 
 // Create compound index
-await mongoo.index('User', { lastName: 1, firstName: 1 });
+await mongoo.createIndex('User', { lastName: 1, firstName: 1 });
 
 // Create unique index
-await mongoo.index('User', { email: 1 }, { unique: true });
+await mongoo.createIndex('User', { email: 1 }, { unique: true });
 
 // Create text index for full-text search
-await mongoo.index('Product', { name: 'text', description: 'text' });
+await mongoo.createIndex('Product', { name: 'text', description: 'text' });
 
-// Create TTL index (auto-delete documents)
-await mongoo.index('Session', { createdAt: 1 }, { expireAfterSeconds: 3600 });
+// Create TTL index (auto-delete documents after time)
+await mongoo.createIndex('Session', { createdAt: 1 }, { expireAfterSeconds: 3600 });
 
 // Create geospatial index
-await mongoo.index('Location', { coordinates: '2dsphere' });
+await mongoo.createIndex('Location', { coordinates: '2dsphere' });
 
-// Get all indexes
-const indexes = await mongoo.getIndexes('User');
-
-// Drop an index
-await mongoo.dropIndex('User', 'email_1');
+// Sync indexes (create and remove)
+await mongoo.syncIndexes('User');
 ```
+
+**Auto-Created Indexes:**
+- Text search: name, title, description fields
+- Compound: status + createdAt, category + price, userId + createdAt
+- TTL: expiresAt field (if exists)
+- Geospatial: location.coordinates (if exists)
+- Partial: isActive (if exists)
 
 ## 🔌 Plugins
 
@@ -672,15 +998,14 @@ const timestampPlugin = function(schema, options) {
   
   schema.pre('save', function(next) {
     this.updatedAt = Date.now();
-    next();
-  });
+    next();});
 };
 
 // Apply plugin to a specific model
 mongoo.plugin('User', timestampPlugin);
 
-// Apply plugin globally to all models
-mongoo.plugin(timestampPlugin);
+// Apply plugin globally to all future models
+mongoo.globalPlugin(timestampPlugin);
 
 // Plugin with options
 const softDeletePlugin = function(schema, options) {
@@ -708,33 +1033,34 @@ mongoo.plugin('User', softDeletePlugin, { includeDeleted: false });
 ## 🌟 Advanced Features
 
 ### Pagination
+
 ```javascript
-// Paginate results
+// Paginate results with full metadata
 const result = await mongoo.paginate('User', 
   { isActive: true }, // filter
   { 
     page: 1, 
     limit: 10, 
     sort: { createdAt: -1 },
-    select: 'name email'
+    select: 'name email',
+    populate: 'posts'
   }
 );
 
 console.log(result);
 // {
-//   docs: [...],
-//   totalDocs: 100,
-//   limit: 10,
-//   page: 1,
-//   totalPages: 10,
-//   hasNextPage: true,
-//   hasPrevPage: false,
-//   nextPage: 2,
-//   prevPage: null
+//   docs: [...], // Array of documents
+//   total: 100,  // Total matching documents
+//   page: 1,     // Current page
+//   limit: 10,   // Items per page
+//   pages: 10,   // Total pages
+//   hasNext: true,  // Has next page
+//   hasPrev: false  // Has previous page
 // }
 ```
 
 ### Bulk Operations
+
 ```javascript
 // Bulk write operations
 await mongoo.bulkWrite('User', [
@@ -755,260 +1081,251 @@ await mongoo.bulkWrite('User', [
     }
   }
 ]);
-
-// Bulk insert
-await mongoo.insertMany('User', [
-  { name: 'User1', email: 'user1@example.com' },
-  { name: 'User2', email: 'user2@example.com' },
-  { name: 'User3', email: 'user3@example.com' }
-]);
 ```
 
 ### Text Search
-```javascript
-// Create text index first
-await mongoo.index('Article', { title: 'text', content: 'text' });
 
-// Perform text search
-const articles = await mongoo.find('Article', {
-  $text: { $search: 'mongodb database' }
-}, {
-  score: { $meta: 'textScore' },
-  sort: { score: { $meta: 'textScore' } }
+```javascript
+// Perform text search (requires text index)
+const articles = await mongoo.textSearch('Article', 'mongodb database', {
+  limit: 10,
+  skip: 0
 });
+// Returns results sorted by text score
 ```
 
 ### Geospatial Queries
-```javascript
-// Create geospatial index
-await mongoo.index('Store', { location: '2dsphere' });
 
+```javascript
 // Find nearby locations
-const nearbyStores = await mongoo.find('Store', {
-  location: {
-    $near: {
-      $geometry: {
-        type: 'Point',
-        coordinates: [-73.97, 40.77] // [longitude, latitude]
-      },
-      $maxDistance: 5000 // 5km in meters
-    }
+const nearbyStores = await mongoo.near(
+  'Store',
+  'location',
+  [-73.97, 40.77], // [longitude, latitude]
+  5000, // 5km in meters
+  { limit: 10 }
+);
+```
+
+### Data Migration
+
+```javascript
+// Migrate existing data
+const processed = await mongoo.migrate('User', async (doc) => {
+  // Transform each document
+  if (!doc.slug) {
+    doc.slug = doc.name.toLowerCase().replace(/\s/g, '-');
+    await doc.save();
   }
+}, {
+  filter: { slug: { $exists: false } },
+  batchSize: 100
 });
 
-// Find within polygon
-const storesInArea = await mongoo.find('Store', {
-  location: {
-    $geoWithin: {
-      $geometry: {
-        type: 'Polygon',
-        coordinates: [[
-          [-73.98, 40.75],
-          [-73.96, 40.75],
-          [-73.96, 40.78],
-          [-73.98, 40.78],
-          [-73.98, 40.75]
-        ]]
-      }
-    }
-  }
+console.log(`Migrated ${processed} documents`);
+```
+
+### Seeding Data
+
+```javascript
+// Seed database with initial data
+await mongoo.seed('User', [
+  { name: 'Admin', email: 'admin@example.com', role: 'admin' },
+  { name: 'User1', email: 'user1@example.com', role: 'user' },
+  { name: 'User2', email: 'user2@example.com', role: 'user' }
+], {
+  clearFirst: true // Clear existing data first
 });
 ```
 
-### Discriminators (Inheritance)
+### Export/Import Data
+
 ```javascript
-// Base schema
-const eventSchema = {
-  title: 'string!',
-  date: 'date!',
-  type: 'string!'
-};
-
-mongoo.model('Event', eventSchema);
-
-// Create discriminators
-const clickEventSchema = {
-  elementId: 'string!',
-  coordinates: {
-    x: 'number!',
-    y: 'number!'
-  }
-};
-
-mongoo.discriminator('Event', 'ClickEvent', clickEventSchema);
-
-const purchaseEventSchema = {
-  productId: 'string!',
-  amount: 'number!',
-  currency: 'string!'
-};
-
-mongoo.discriminator('Event', 'PurchaseEvent', purchaseEventSchema);
-
-// Usage
-await mongoo.create('ClickEvent', {
-  title: 'Button Click',
-  date: new Date(),
-  type: 'click',
-  elementId: 'btn-submit',
-  coordinates: { x: 100, y: 200 }
+// Export data
+const users = await mongoo.exportData('User', {
+  filter: { isActive: true },
+  fields: 'name email createdAt'
 });
 
-await mongoo.create('PurchaseEvent', {
-  title: 'Product Purchase',
-  date: new Date(),
-  type: 'purchase',
-  productId: 'prod-123',
-  amount: 99.99,
-  currency: 'USD'
-});
+// Import data
+await mongoo.importData('User', users);
+```
+
+### Query Explanation
+
+```javascript
+// Explain query execution plan
+const explanation = await mongoo.explain('User', 'find', { isActive: true });
+console.log(explanation);
+// Shows index usage, execution stats, etc.
 ```
 
 ### Caching
+
 ```javascript
-// Enable caching
-mongoo.enableCache({ ttl: 300 }); // 5 minutes TTL
+// Cache query results
+const users = await mongoo.cache('User', 'active-users', async () => {
+  return await mongoo.find('User', { isActive: true });
+}, 3600); // Cache for 1 hour
 
-// Query with cache
-const users = await mongoo.find('User', { isActive: true }, { cache: true });
-
-// Clear cache for a model
-mongoo.clearCache('User');
-
-// Clear all cache
-mongoo.clearAllCache();
-
-// Disable caching
-mongoo.disableCache();
+// Clear cache
+mongoo.clearCache('User:active-users');
+mongoo.clearCache(); // Clear all cache
 ```
+
+## 🎯 Predefined Templates
+
+Easy-Mongoo includes ready-to-use schema templates for common use cases:
+
+### User Template
+
+```javascript
+mongoo.model('User', mongoo.templates.user);
+```
+
+**Includes:**
+- firstName, lastName (required)
+- email (required, unique, validated)
+- password (hashed automatically)
+- avatar, birthDate, phone, bio
+- isActive, isVerified (with defaults)
+- role (enum: user/admin/moderator)
+- permissions (array)
+- loginCount, lastLogin
+- settings (theme, notifications, language)
+- location (address, city, country, coordinates)
+
+### Product Template
+
+```javascript
+mongoo.model('Product', mongoo.templates.product);
+```
+
+**Includes:**
+- name (required), sku (required, unique)
+- description, category, tags
+- price, comparePrice, cost (validated)
+- inventory (quantity, tracking, allow out of stock)
+- isActive, isFeatured, isDigital
+- images, thumbnail
+- seo (title, description, slug)
+- viewCount, purchaseCount
+
+### Post Template
+
+```javascript
+mongoo.model('Post', mongoo.templates.post);
+```
+
+**Includes:**
+- title, content (required), excerpt
+- author, coAuthors (user references)
+- status (draft/published/archived)
+- visibility (public/private/members)
+- categories, tags
+- featuredImage, gallery
+- viewCount, likeCount, commentCount
+- meta (SEO fields)
+
+### Order Template
+
+```javascript
+mongoo.model('Order', mongoo.templates.order);
+```
+
+**Includes:**
+- orderNumber (required, unique)
+- status (pending/confirmed/processing/shipped/delivered/cancelled/refunded)
+- customer (user reference), email
+- shippingAddress (complete address object)
+- items (array with product, price, quantity)
+- subtotal, tax, shipping, discount, total
+- paymentStatus, paymentMethod, transactionId
 
 ## ❌ Error Handling
 
-Easy-Mongoo provides comprehensive error handling:
+Easy-Mongoo provides comprehensive error handling with user-friendly messages:
+
 ```javascript
 try {
   await mongoo.create('User', {
     email: 'invalid-email' // Will fail validation
   });
 } catch (error) {
-  console.log(error.name); // 'ValidationError'
-  console.log(error.message); // User-friendly message
-  console.log(error.errors); // Detailed field errors
+  console.log(error.message);
+  // "Validation failed: Please enter a valid email"
 }
-
-// Common error types:
-// - ValidationError: Schema validation failed
-// - CastError: Type casting failed
-// - DuplicateKeyError: Unique constraint violation
-// - DocumentNotFoundError: Document not found
-// - VersionError: Version conflict in update
 ```
 
-## 🎯 Predefined Templates
+**Auto-Handled Error Types:**
 
-Easy-Mongoo includes ready-to-use schema templates:
+| Error Type | Description | User-Friendly Message |
+|------------|-------------|----------------------|
+| ValidationError | Schema validation failed | "Validation failed: [field] is required" |
+| CastError | Invalid ID format | "Invalid ID format" |
+| Duplicate Key (11000) | Unique constraint violation | "[field] already exists. Please use a different value." |
+| Document Not Found | ID not found | "[Model] with ID [id] not found" |
+
+**Error Options:**
+
 ```javascript
-// User template
-mongoo.model('User', mongoo.templates.user);
-// Includes: name, email, password, role, isActive, timestamps
+// Don't throw error if not found
+const user = await mongoo.findById('User', userId, {
+  throwIfNotFound: false
+});
+// Returns null instead of throwing
 
-// Product template
-mongoo.model('Product', mongoo.templates.product);
-// Includes: name, description, price, category, stock, images
-
-// Post/Article template
-mongoo.model('Post', mongoo.templates.post);
-// Includes: title, content, author, tags, published, views
-
-// Comment template
-mongoo.model('Comment', mongoo.templates.comment);
-// Includes: text, author, post, likes, createdAt
-
-// Category template
-mongoo.model('Category', mongoo.templates.category);
-// Includes: name, slug, description, parent, order
+// Using "OrFail" methods
+const user = await mongoo.findByIdOrFail('User', userId);
+// Always throws if not found
 ```
 
 ## 🐛 Debugging
 
-Enable debugging to see detailed logs:
+Enable debugging to see detailed operation logs:
+
 ```javascript
-// Enable debug mode
+// Enable debug mode on connect
 await mongoo.connect('mongodb://localhost:27017/mydb', {
   debug: true
 });
 
-// Or enable later
-mongoo.setDebug(true);
+// Enable/disable anytime
+mongoo.setDebug(true);  // Enable
+mongoo.setDebug(false); // Disable
 
-// Custom debug handler
-mongoo.setDebug((collectionName, method, query, doc) => {
-  console.log(`${collectionName}.${method}`, query, doc);
-});
-
-// Disable debug mode
-mongoo.setDebug(false);
+// Debug output examples:
+// ✅ MongoDB Connected Successfully!
+// 📊 Database: mydb
+// 📝 Model 'User' created with auto-features
+// 💾 User saved: 507f1f77bcf86cd799439011
+// ✅ Created User
+// 🔍 Found 10 User documents
 ```
 
-## 📚 API Reference
+## 🧰 Utility Methods
 
-### Connection Methods
-- `connect(uri, options)` - Connect to MongoDB
-- `disconnect()` - Disconnect from MongoDB
-- `status()` - Get connection status
+### Database Operations
 
-### Model Methods
-- `model(name, schema)` - Create or get a model
-- `getModel(name)` - Get existing model
-- `discriminator(baseModel, name, schema)` - Create discriminator
+```javascript
+// Drop entire database
+await mongoo.dropDatabase();
 
-### CRUD Methods
-- `create(model, data, options)` - Create document(s)
-- `find(model, filter, options)` - Find documents
-- `findOne(model, filter, options)` - Find one document
-- `findById(model, id, options)` - Find by ID
-- `update(model, filter, data, options)` - Update documents
-- `updateById(model, id, data, options)` - Update by ID
-- `save(model, data, options)` - Create or update
-- `delete(model, filter, options)` - Delete documents
-- `deleteById(model, id, options)` - Delete by ID
-- `exists(model, filter)` - Check if document exists
-- `count(model, filter)` - Count documents
-- `findOrCreate(model, filter, data)` - Find or create
+// Clear all collections
+await mongoo.clearAll();
 
-### Advanced Methods
-- `aggregate(model, pipeline, options)` - Run aggregation
-- `paginate(model, filter, options)` - Paginate results
-- `bulkWrite(model, operations)` - Bulk operations
-- `insertMany(model, docs, options)` - Insert multiple
-- `withTransaction(callback)` - Run transaction
-- `withRetryTransaction(callback, maxRetries)` - Transaction with retry
+// Get MongoDB types
+const ObjectId = mongoo.ObjectId;
+const Schema = mongoo.Schema;
+const Types = mongoo.Types;
 
-### Schema Enhancement Methods
-- `virtual(model, name, getter, setter)` - Add virtual field
-- `method(model, name, fn)` - Add instance method
-- `static(model, name, fn)` - Add static method
-- `query(model, name, fn)` - Add query helper
-- `pre(model, hook, fn)` - Add pre hook
-- `post(model, hook, fn)` - Add post hook
-- `plugin(model, plugin, options)` - Add plugin
-
-### Index Methods
-- `index(model, fields, options)` - Create index
-- `getIndexes(model)` - Get all indexes
-- `dropIndex(model, indexName)` - Drop index
-
-### Cache Methods
-- `enableCache(options)` - Enable caching
-- `disableCache()` - Disable caching
-- `clearCache(model)` - Clear model cache
-- `clearAllCache()` - Clear all cache
+// Access underlying mongoose instance
+const mongoose = mongoo.mongoose;
+```
 
 ## 🆚 Mongoose vs Easy-Mongoo
 
-Here's a detailed comparison showing how Easy-Mongoo simplifies your code:
-
-### Connection
+### Connection Comparison
 
 **Mongoose:**
 ```javascript
@@ -1018,36 +1335,21 @@ mongoose.connect('mongodb://localhost:27017/mydb', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('Connection error:', err));
-
-// Check connection
-const db = mongoose.connection;
-db.on('error', console.error.bind(console, 'connection error:'));
-db.once('open', function() {
-  console.log('Database connected');
-});
+.then(() => console.log('Connected'))
+.catch(err => console.error('Error:', err));
 ```
 
 **Easy-Mongoo:**
 ```javascript
 const mongoo = require('easy-mongoo');
-
 await mongoo.connect('mongodb://localhost:27017/mydb');
-// That's it! Auto error handling and logging included
-
-// Check status
-const status = mongoo.status();
 ```
 
-### Schema Definition
+### Schema Definition Comparison
 
 **Mongoose:**
 ```javascript
-const mongoose = require('mongoose');
-const Schema = mongoose.Schema;
-
-const userSchema = new Schema({
+const userSchema = new mongoose.Schema({
   firstName: {
     type: String,
     required: [true, 'First name is required'],
@@ -1063,608 +1365,197 @@ const userSchema = new Schema({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    match: [/^\S+@\S+.\S+$/, 'Please enter a valid email']
+    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
   },
-  age: {
-    type: Number,
-    min: [0, 'Age cannot be negative']
-  },
-  isActive: {
-  type: Boolean,
-  default: true
-}
-}, {
-timestamps: true
-});
-// Add virtuals
+  age: Number,
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
 userSchema.virtual('fullName').get(function() {
-return ${this.firstName} ${this.lastName};
+  return `${this.firstName} ${this.lastName}`;
 });
+
 const User = mongoose.model('User', userSchema);
+```
 
 **Easy-Mongoo:**
 ```javascript
-const mongoo = require('easy-mongoo');
-
 mongoo.model('User', {
   firstName: 'string!',
   lastName: 'string!',
-  email: 'email',
+  email: 'email!!',
   age: 'number?',
   isActive: 'boolean+'
 });
-
-// Virtuals like fullName are auto-generated!
+// fullName virtual is auto-generated!
 ```
 
-### CRUD Operations
+### CRUD Comparison
 
-**Mongoose:**
+**Mongoose (50+ lines):**
 ```javascript
 // CREATE
 const user = new User({
   firstName: 'John',
   lastName: 'Doe',
-  email: 'john@example.com',
-  age: 30
+  email: 'john@example.com'
 });
-
 try {
   await user.save();
-  console.log('User created');
 } catch (error) {
-  console.error('Error creating user:', error);
+  console.error('Error:', error);
 }
 
 // READ
 try {
   const users = await User.find({ isActive: true })
     .sort({ createdAt: -1 })
-    .limit(10)
-    .select('firstName lastName email')
-    .exec();
+    .limit(10);
 } catch (error) {
-  console.error('Error finding users:', error);
+  console.error('Error:', error);
 }
 
 // UPDATE
 try {
-  const updatedUser = await User.findByIdAndUpdate(
-    userId,
-    { age: 31 },
-    { new: true, runValidators: true }
-  );
+  await User.findByIdAndUpdate(userId, { age: 31 }, { new: true });
 } catch (error) {
-  console.error('Error updating user:', error);
+  console.error('Error:', error);
 }
 
 // DELETE
 try {
   await User.findByIdAndDelete(userId);
 } catch (error) {
-  console.error('Error deleting user:', error);
+  console.error('Error:', error);
 }
 ```
 
-**Easy-Mongoo:**
+**Easy-Mongoo (4 lines):**
 ```javascript
-// CREATE
-const user = await mongoo.create('User', {
-  firstName: 'John',
-  lastName: 'Doe',
-  email: 'john@example.com',
-  age: 30
-});
-
-// READ
-const users = await mongoo.find('User', { isActive: true }, {
-  sort: { createdAt: -1 },
-  limit: 10,
-  select: 'firstName lastName email'
-});
-
-// UPDATE
-const updatedUser = await mongoo.updateById('User', userId, { age: 31 });
-
-// DELETE
-await mongoo.deleteById('User', userId);
-
-// Auto error handling included!
+// CREATE, READ, UPDATE, DELETE with auto error handling
+await mongoo.create('User', { firstName: 'John', lastName: 'Doe', email: 'john@example.com' });
+const users = await mongoo.find('User', { isActive: true }, { sort: { createdAt: -1 }, limit: 10 });
+await mongoo.findByIdAndUpdate('User', userId, { age: 31 });
+await mongoo.findByIdAndDelete('User', userId);
 ```
 
-### Virtual Fields
+### Key Advantages
 
-**Mongoose:**
-```javascript
-const userSchema = new Schema({
-  firstName: String,
-  lastName: String,
-  birthDate: Date
-});
+| Feature | Mongoose | Easy-Mongoo | Improvement |
+|---------|----------|-------------|-------------|
+| **Lines of Code** | 100+ for basic setup | 20 for same setup | 80% reduction |
+| **Schema Shortcuts** | ❌ No | ✅ Yes (30+ shortcuts) | Much faster |
+| **Auto Virtuals** | ❌ Manual | ✅ Auto (fullName, age, etc.) | Time saver |
+| **Auto Indexes** | ❌ Manual | ✅ Auto (text, compound, geo) | Time saver |
+| **Error Handling** | ❌ Manual try-catch | ✅ Automatic | Better UX |
+| **Timestamps** | ⚠️ Need to enable | ✅ Always included | Convenience |
+| **Soft Deletes** | ❌ Custom plugin | ✅ Built-in methods | Productivity |
+| **Pagination** | ❌ Manual calculation | ✅ One method call | Huge time saver |
+| **Templates** | ❌ No | ✅ 4 ready templates | Quick start |
+| **Learning Curve** | ⚠️ Steep | ✅ Gentle | Beginner friendly |
 
-// Define virtual for fullName
-userSchema.virtual('fullName').get(function() {
-  return `${this.firstName} ${this.lastName}`;
-});
+## 📚 Complete API Reference
 
-// Define virtual for age
-userSchema.virtual('age').get(function() {
-  if (!this.birthDate) return null;
-  const today = new Date();
-  const birthDate = new Date(this.birthDate);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
-  return age;
-});
+### Connection
+- `connect(uri, options)` - Connect to MongoDB
+- `disconnect()` - Disconnect from MongoDB  
+- `status()` - Get connection status
+- `startSession()` - Start a new session
 
-// Make sure virtuals are included in JSON
-userSchema.set('toJSON', { virtuals: true });
-userSchema.set('toObject', { virtuals: true });
+### Models
+- `model(name, schema, options)` - Create model
+- `discriminator(baseModel, name, schema)` - Create discriminator
+- `schema(definition, options)` - Create schema
 
-const User = mongoose.model('User', userSchema);
-```
+### Basic CRUD
+- `create(model, data, options)` - Create document(s)
+- `find(model, filter, options)` - Find documents
+- `findOne(model, filter, options)` - Find one document
+- `findOneAndUpdate(model, filter, data, options)` - Find and update
+- `findOneAndDelete(model, filter, options)` - Find and delete
+- `update(model, filter, data, options)` - Update many
+- `delete(model, filter, options)` - Delete many
+- `count(model, filter)` - Count documents
+- `exists(model, filter)` - Check existence
+- `distinct(model, field, filter)` - Get distinct values
 
-**Easy-Mongoo:**
-```javascript
-mongoo.model('User', {
-  firstName: 'string!',
-  lastName: 'string!',
-  birthDate: 'date?'
-});
+### ID Operations
+- `findById(model, id, options)` - Find by ID
+- `findByIdOrFail(model, id, options)` - Find by ID or throw
+- `existsById(model, id)` - Check if ID exists
+- `findByIdAndUpdate(model, id, data, options)` - Update by ID
+- `findByIdAndUpdateOrFail(model, id, data, options)` - Update by ID or throw
+- `updateById(model, id, data, options)` - Update by ID (returns result)
+- `findByIdAndDelete(model, id, options)` - Delete by ID
+- `findByIdAndDeleteOrFail(model, id, options)` - Delete by ID or throw
+- `deleteById(model, id, options)` - Delete by ID (returns result)
+- `findByIdAndUpsert(model, id, data, options)` - Upsert by ID
 
-// fullName and age virtuals are auto-generated!
-// Just use them:
-const user = await mongoo.findById('User', userId);
-console.log(user.fullName); // "John Doe"
-console.log(user.age); // 30
-```
+### Batch ID Operations
+- `findByIds(model, ids, options)` - Find multiple by IDs
+- `updateByIds(model, ids, data, options)` - Update multiple by IDs
+- `deleteByIds(model, ids, options)` - Delete multiple by IDs
 
-### Instance Methods
+### Field Updates
+- `findByIdAndIncrement(model, id, field, value, options)` - Increment field
+- `findByIdAndPush(model, id, field, value, options)` - Push to array
+- `findByIdAndPull(model, id, field, value, options)` - Pull from array
 
-**Mongoose:**
-```javascript
-const userSchema = new Schema({
-  name: String,
-  email: String,
-  isActive: Boolean
-});
+### Status Operations
+- `findByIdAndActivate(model, id, options)` - Activate document
+- `findByIdAndDeactivate(model, id, options)` - Deactivate document
+- `findByIdAndArchive(model, id, options)` - Archive document
+- `findByIdAndPublish(model, id, options)` - Publish document
 
-userSchema.methods.deactivate = async function(reason) {
-  this.isActive = false;
-  this.deactivationReason = reason;
-  this.deactivatedAt = new Date();
-  return await this.save();
-};
+### Soft Deletes
+- `findByIdAndSoftDelete(model, id, options)` - Soft delete
+- `findByIdAndRestore(model, id, options)` - Restore deleted
 
-userSchema.methods.getProfile = function() {
-  return {
-    name: this.name,
-    email: this.email,
-    memberSince: this.createdAt
-  };
-};
-
-const User = mongoose.model('User', userSchema);
-
-// Usage
-const user = await User.findById(userId);
-await user.deactivate('User requested');
-const profile = user.getProfile();
-```
-
-**Easy-Mongoo:**
-```javascript
-mongoo.model('User', {
-  name: 'string!',
-  email: 'email',
-  isActive: 'boolean+'
-});
-
-mongoo.method('User', 'deactivate', async function(reason) {
-  this.isActive = false;
-  this.deactivationReason = reason;
-  this.deactivatedAt = new Date();
-  return await this.save();
-});
-
-mongoo.method('User', 'getProfile', function() {
-  return {
-    name: this.name,
-    email: this.email,
-    memberSince: this.createdAt
-  };
-});
-
-// Usage
-const user = await mongoo.findById('User', userId);
-await user.deactivate('User requested');
-const profile = user.getProfile();
-```
-
-### Static Methods
-
-**Mongoose:**
-```javascript
-const userSchema = new Schema({
-  email: String,
-  isActive: Boolean
-});
-
-userSchema.statics.findByEmail = async function(email) {
-  return await this.findOne({ email }).populate('posts');
-};
-
-userSchema.statics.getActiveStats = async function() {
-  const stats = await this.aggregate([
-    { $match: { isActive: true } },
-    {
-      $group: {
-        _id: null,
-        total: { $sum: 1 },
-        avgAge: { $avg: '$age' }
-      }
-    }
-  ]);
-  return stats[0] || {};
-};
-
-const User = mongoose.model('User', userSchema);
-
-// Usage
-const user = await User.findByEmail('john@example.com');
-const stats = await User.getActiveStats();
-```
-
-**Easy-Mongoo:**
-```javascript
-mongoo.model('User', {
-  email: 'email',
-  isActive: 'boolean+'
-});
-
-mongoo.static('User', 'findByEmail', async function(email) {
-  return await this.findOne({ email }).populate('posts');
-});
-
-mongoo.static('User', 'getActiveStats', async function() {
-  const stats = await this.aggregate([
-    { $match: { isActive: true } },
-    { $group: { _id: null, total: { $sum: 1 }, avgAge: { $avg: '$age' } } }
-  ]);
-  return stats[0] || {};
-});
-
-// Usage
-const User = mongoo.getModel('User');
-const user = await User.findByEmail('john@example.com');
-const stats = await User.getActiveStats();
-```
-
-### Middleware (Hooks)
-
-**Mongoose:**
-```javascript
-const bcrypt = require('bcrypt');
-
-const userSchema = new Schema({
-  email: String,
-  password: String
-});
-
-// Pre-save hook
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
-    this.password = await bcrypt.hash(this.password, 12);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Post-save hook
-userSchema.post('save', function(doc, next) {
-  console.log(`User ${doc.email} was saved`);
-  next();
-});
-
-// Pre-remove hook
-userSchema.pre('remove', async function(next) {
-  try {
-    await Post.deleteMany({ author: this._id });
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
-
-const User = mongoose.model('User', userSchema);
-```
-
-**Easy-Mongoo:**
-```javascript
-mongoo.model('User', {
-  email: 'email',
-  password: 'password'
-});
-
-// Pre-save hook
-mongoo.pre('User', 'save', async function(next) {
-  if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 12);
-  }
-  next();
-});
-
-// Post-save hook
-mongoo.post('User', 'save', function(doc) {
-  console.log(`User ${doc.email} was saved`);
-});
-
-// Pre-remove hook
-mongoo.pre('User', 'remove', async function(next) {
-  await mongoo.delete('Post', { author: this._id });
-  next();
-});
-```
+### Advanced
+- `aggregate(model, pipeline, options)` - Run aggregation
+- `paginate(model, filter, options)` - Paginate results
+- `textSearch(model, text, options)` - Text search
+- `near(model, field, coords, distance, options)` - Geospatial query
+- `bulkWrite(model, operations, options)` - Bulk operations
 
 ### Transactions
+- `withTransaction(callback)` - Execute transaction
+- `withRetryTransaction(callback, maxRetries)` - Transaction with retry
 
-**Mongoose:**
-```javascript
-const session = await mongoose.startSession();
-session.startTransaction();
-
-try {
-  const user = new User({
-    name: 'Alice',
-    email: 'alice@example.com'
-  });
-  await user.save({ session });
-  
-  const post = new Post({
-    title: 'First Post',
-    content: 'Hello World!',
-    author: user._id
-  });
-  await post.save({ session });
-  
-  await session.commitTransaction();
-  console.log('Transaction successful');
-} catch (error) {
-  await session.abortTransaction();
-  console.error('Transaction failed:', error);
-  throw error;
-} finally {
-  session.endSession();
-}
-```
-
-**Easy-Mongoo:**
-```javascript
-await mongoo.withTransaction(async (session) => {
-  const user = await mongoo.create('User', {
-    name: 'Alice',
-    email: 'alice@example.com'
-  }, { session });
-  
-  await mongoo.create('Post', {
-    title: 'First Post',
-    content: 'Hello World!',
-    author: user._id
-  }, { session });
-});
-
-// Auto commit/rollback and error handling!
-```
-
-### Aggregation
-
-**Mongoose:**
-```javascript
-try {
-  const stats = await User.aggregate([
-    { $match: { isActive: true } },
-    {
-      $group: {
-        _id: '$country',
-        totalUsers: { $sum: 1 },
-        avgAge: { $avg: '$age' }
-      }
-    },
-    { $sort: { totalUsers: -1 } }
-  ]);
-  
-  console.log(stats);
-} catch (error) {
-  console.error('Aggregation error:', error);
-}
-```
-
-**Easy-Mongoo:**
-```javascript
-const stats = await mongoo.aggregate('User', [
-  { $match: { isActive: true } },
-  {
-    $group: {
-      _id: '$country',
-      totalUsers: { $sum: 1 },
-      avgAge: { $avg: '$age' }
-    }
-  },
-  { $sort: { totalUsers: -1 } }
-]);
-
-// Auto error handling!
-```
-
-### Pagination
-
-**Mongoose:**
-```javascript
-const page = 1;
-const limit = 10;
-const skip = (page - 1) * limit;
-
-try {
-  const users = await User.find({ isActive: true })
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .skip(skip)
-    .select('name email')
-    .exec();
-  
-  const totalDocs = await User.countDocuments({ isActive: true });
-  const totalPages = Math.ceil(totalDocs / limit);
-  
-  const result = {
-    docs: users,
-    totalDocs,
-    limit,
-    page,
-    totalPages,
-    hasNextPage: page < totalPages,
-    hasPrevPage: page > 1,
-    nextPage: page < totalPages ? page + 1 : null,
-    prevPage: page > 1 ? page - 1 : null
-  };
-  
-  console.log(result);
-} catch (error) {
-  console.error('Pagination error:', error);
-}
-```
-
-**Easy-Mongoo:**
-```javascript
-const result = await mongoo.paginate('User', 
-  { isActive: true },
-  { 
-    page: 1,
-    limit: 10,
-    sort: { createdAt: -1 },
-    select: 'name email'
-  }
-);
-
-// Returns complete pagination object automatically!
-```
+### Schema Extensions
+- `virtual(model, name, getter, setter)` - Add virtual
+- `method(model, name, fn)` - Add instance method
+- `static(model, name, fn)` - Add static method
+- `query(model, name, fn)` - Add query helper
+- `pre(model, hook, fn)` - Add pre hook
+- `post(model, hook, fn)` - Add post hook
+- `plugin(model, plugin, options)` - Add plugin
+- `globalPlugin(plugin, options)` - Add global plugin
 
 ### Indexes
+- `createIndex(model, fields, options)` - Create index
+- `syncIndexes(model)` - Sync indexes
 
-**Mongoose:**
-```javascript
-const userSchema = new Schema({
-  email: String,
-  firstName: String,
-  lastName: String
-});
+### Data Management
+- `migrate(model, fn, options)` - Migrate data
+- `seed(model, data, options)` - Seed data
+- `exportData(model, options)` - Export data
+- `importData(model, data, options)` - Import data
 
-// Create indexes
-userSchema.index({ email: 1 }, { unique: true });
-userSchema.index({ lastName: 1, firstName: 1 });
-userSchema.index({ createdAt: 1 }, { expireAfterSeconds: 3600 });
+### Utilities
+- `explain(model, operation, ...args)` - Query explanation
+- `cache(model, key, fn, ttl)` - Cache results
+- `clearCache(pattern)` - Clear cache
+- `setDebug(enabled)` - Enable/disable debug
+- `dropDatabase()` - Drop database
+- `clearAll()` - Clear all collections
 
-const User = mongoose.model('User', userSchema);
-
-// Ensure indexes are created
-User.createIndexes((err) => {
-  if (err) console.error('Index creation error:', err);
-});
-
-// Get indexes
-User.collection.getIndexes((err, indexes) => {
-  if (err) console.error(err);
-  console.log(indexes);
-});
-```
-
-**Easy-Mongoo:**
-```javascript
-mongoo.model('User', {
-  email: 'email',
-  firstName: 'string!',
-  lastName: 'string!'
-});
-
-// Create indexes
-await mongoo.index('User', { email: 1 }, { unique: true });
-await mongoo.index('User', { lastName: 1, firstName: 1 });
-await mongoo.index('User', { createdAt: 1 }, { expireAfterSeconds: 3600 });
-
-// Get indexes
-const indexes = await mongoo.getIndexes('User');
-```
-
-### Key Differences Summary
-
-| Feature | Mongoose | Easy-Mongoo |
-|---------|----------|-------------|
-| **Setup Complexity** | Multiple steps, verbose | One-line operations |
-| **Schema Definition** | Verbose object notation | Simple string shortcuts |
-| **Error Handling** | Manual try-catch everywhere | Automatic |
-| **Virtuals** | Manual definition required | Auto-generated common virtuals |
-| **Timestamps** | Need to enable in options | Always included |
-| **Method Definition** | Schema-level definition | Simple method registration |
-| **Transactions** | Manual session management | Auto-managed sessions |
-| **Pagination** | Manual calculation | Built-in method |
-| **Learning Curve** | Steep for beginners | Gentle, intuitive |
-| **Code Lines** | ~50-100 lines for basic setup | ~10-20 lines for same setup |
-| **Flexibility** | Full control | Full control + convenience |
-
-## 📈 Performance Comparison
-
-Both Easy-Mongoo and Mongoose use the same underlying MongoDB driver, so performance is essentially identical:
-
-- ✅ Same query execution speed
-- ✅ Same connection pooling
-- ✅ Same indexing capabilities
-- ✅ No performance overhead from Easy-Mongoo wrapper
-- ✅ Easy-Mongoo adds convenience, not latency
-
-## 🎓 When to Use Easy-Mongoo vs Mongoose
-
-### Choose Easy-Mongoo when:
-- ✅ You want to get started quickly
-- ✅ You prefer clean, minimal code
-- ✅ You're building MVPs or prototypes
-- ✅ You want automatic best practices
-- ✅ Your team prefers simplicity
-- ✅ You're new to MongoDB/Mongoose
-
-### Choose Mongoose when:
-- ✅ You need absolute fine-grained control
-- ✅ You have very specific custom requirements
-- ✅ You're already deeply familiar with Mongoose
-- ✅ You need features not yet in Easy-Mongoo
-- ✅ Your project has legacy Mongoose code
-
-## 💡 Migration from Mongoose
-
-Migrating from Mongoose to Easy-Mongoo is straightforward:
-```javascript
-// Before (Mongoose)
-const mongoose = require('mongoose');
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true }
-});
-const User = mongoose.model('User', userSchema);
-
-// After (Easy-Mongoo)
-const mongoo = require('easy-mongoo');
-mongoo.model('User', {
-  name: 'string!',
-  email: 'email'
-});
-
-// All your existing Mongoose knowledge applies!
-// Easy-Mongoo is built on top of Mongoose, not a replacement
-```
+### Properties
+- `mongoose` - Access mongoose instance
+- `ObjectId` - MongoDB ObjectId type
+- `Schema` - Mongoose Schema class
+- `Types` - Mongoose Types
+- `templates` - Predefined schema templates (user, product, post, order)
 
 ## 🤝 Contributing
 
@@ -1696,16 +1587,17 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🗺️ Roadmap
 
 - [ ] TypeScript support with auto-generated types
-- [ ] Built-in caching layer
-- [ ] GraphQL integration
-- [ ] Real-time change streams
-- [ ] Advanced query builder
-- [ ] Performance monitoring
-- [ ] Migration tools
-- [ ] CLI tools for scaffolding
+- [ ] Redis caching integration
+- [ ] GraphQL adapter
+- [ ] Real-time change streams API
+- [ ] Advanced query builder UI
+- [ ] Performance monitoring dashboard
+- [ ] Database migration CLI
+- [ ] Visual schema designer
 
 ---
 
 **Made with ❤️ by developers, for developers**
 
 **Star ⭐ this repo if you find it useful!**
+```
