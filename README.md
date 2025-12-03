@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Downloads](https://img.shields.io/npm/dm/easy-mongoo.svg)](https://www.npmjs.com/package/easy-mongoo)
 
+
 Ultra-simple MongoDB wrapper with all Mongoose features in easy syntax. Make MongoDB operations effortless while maintaining enterprise-grade power and flexibility.
 
 ## ✨ Features
